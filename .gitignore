@@ -1,0 +1,5 @@
+build
+.vscode
+ief-env
+*.pyc
+notes.md

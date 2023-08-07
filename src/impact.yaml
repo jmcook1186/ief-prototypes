@@ -1,0 +1,56 @@
+name: first-model
+description: arbitrary-data-to play-with
+tags:
+  kind: web-server
+  complexity: simple
+  category: cloud
+config:
+  pipeline:
+    calculation: model1
+    normalization: norm1
+    aggregation: aggregation1
+# Single observation
+graph:
+  backend: # an advanced grouping node
+    model: default  
+    config: 
+      vendor: azure
+      region: east-us  
+    children: 
+      queue: # a leaf component
+        observations: 
+          common:
+            sku: AC2
+          series:
+            - timestamp: 2023-07-06T00:00
+              span: 5 # this data is using span, but the model expects duration
+              cpu: 0.34
+            - timestamp: 2023-07-06T00:05
+              span: 5
+              cpu: 0.23
+            - timestamp: 2023-07-06T00:05
+              span: 5
+              cpu: 0.11
+          mapping:
+            span:
+              units: seconds
+              to: duration
+      servers: # a leaf component
+        config: ccf.cloud.sci  
+        params: 
+          vendor: aws
+          region: france
+        observations: 
+          common:
+            sku: EC2
+          series:      
+            - datetime: 2023-07-06T00:00
+              duration: 5
+              cpu: 0.34
+            - datetime: 2023-07-06T00:05
+              duration: 5
+              cpu: 0.23
+            - datetime: 2023-07-06T00:05
+              duration: 5
+              cpu: 0.11
+
