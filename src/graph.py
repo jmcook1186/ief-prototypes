@@ -28,14 +28,12 @@ class impact_graph:
     def __init__(self):
         SRC_PATH = Path(__file__).resolve().parent
         input_file = SRC_PATH.joinpath("dow_msft_graph.yaml").as_posix()
-        print(input_file)
         with open(input_file, "r") as ymlfile:
             inputs = yaml.load(ymlfile, Loader=yaml.FullLoader)
-        print(inputs)
         self.name = inputs["name"]
         self.description = inputs["description"]
         self.tags = dict(inputs["tags"])
-        self.config = GraphConfig(inputs)
+        self.config = Config(inputs)
         self.graph = Graph(inputs)
 
     def show_name(self):
@@ -69,7 +67,7 @@ class impact_graph:
             raise ValueError("Model not recognized")
 
 
-class GraphConfig:
+class Config:
     def __init__(self, inputs):
         calculation = inputs["config"]["pipeline"]["calculation"]
         normalization = inputs["config"]["pipeline"]["normalization"]
