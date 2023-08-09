@@ -33,4 +33,4 @@ if args.config:
 
 
 if args.calculate_cpu:
-    print("Total CPU usage = ", graph.calculate_cpu_sum())
+    print("Total CPU usage = ", graph.run_model())

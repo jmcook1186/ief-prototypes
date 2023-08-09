@@ -1,0 +1,49 @@
+name: dow-msft
+description: "https://github.com/Green-Software-Foundation/sci-guide/blob/dev/use-case-submissions/dow-msft-Graph-DB.md"
+tags:
+  kind: db-api
+  complexity: simple
+  category: cloud
+config:
+  pipeline:
+    calculation: dow-msft
+    normalization: default
+    aggregation: default
+# Single observation
+graph:
+  backend: # an advanced grouping node
+    model: default  
+    config: 
+      vendor: azure
+      region: east-us  # lookup carbon intensity from region
+    children: 
+      database: # a leaf component
+        observations: 
+          common:
+            n_cpu: 8
+            ram: 6.2 #ram utilized in GB
+            server: Intel-xeon-platinum-8380 # will lookup TPU and total embodied coefficients from model name
+          series:
+            - timestamp: 2023-07-06T00:00
+              span: 1 # this data is using span, but the model expects duration
+              cpu_load: 0.4 #% total available cpu usage as fraction in range 0-1
+          mapping:
+            span:
+              units: hours
+              to: duration
+      api: # a leaf component
+        observations: 
+          common:
+            n_cpu: 8
+            ram: 1.22 #ram utilized in GB
+            server: Intel-xeon-platinum-8270 # will lookup TPU and total embodied coefficients from model name
+          series:      
+            - datetime: 2023-07-06T00:00
+              duration: 1
+              cpu_load: 0.4
+          mapping:
+            span:
+              units: hours
+              to: duration
+
+

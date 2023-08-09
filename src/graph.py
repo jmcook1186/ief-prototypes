@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from models.model1 import model1
+from models.models import dow_msft_model
 
 
 class impact_graph:
@@ -27,9 +27,11 @@ class impact_graph:
 
     def __init__(self):
         SRC_PATH = Path(__file__).resolve().parent
-        input_file = SRC_PATH.joinpath("impact.yaml").as_posix()
+        input_file = SRC_PATH.joinpath("dow_msft_graph.yaml").as_posix()
+        print(input_file)
         with open(input_file, "r") as ymlfile:
             inputs = yaml.load(ymlfile, Loader=yaml.FullLoader)
+        print(inputs)
         self.name = inputs["name"]
         self.description = inputs["description"]
         self.tags = dict(inputs["tags"])
@@ -60,9 +62,9 @@ class impact_graph:
                 print("Child: ", j.type, j.id, "\n")
                 print(j.observations.series.data)
 
-    def calculate_cpu_sum(self):
-        if self.config.pipeline.calculation == "model1":
-            return model1(self.graph)
+    def run_model(self):
+        if self.config.pipeline.calculation == "dow-msft":
+            return dow_msft_model(self.graph)
         else:
             raise ValueError("Model not recognized")
 
@@ -126,16 +128,36 @@ class Child:
             # self.params =
             self.observations = Observation(inputs["observations"])
 
+        elif name == "database":
+            self.type = "database"
+            self.id = id
+            # self.config =
+            # self.params =
+            self.observations = Observation(inputs["observations"])
+
+        elif name == "api":
+            self.type = "api"
+            self.id = id
+            # self.config =
+            # self.params =
+            self.observations = Observation(inputs["observations"])
+
 
 class Observation:
     def __init__(self, inputs):
-        self.common = Common(inputs["common"]["sku"])
+        self.common = Common(inputs)
         self.series = Series(inputs["series"])
 
 
 class Common:
-    def __init__(self, sku):
-        self.sku = sku
+    def __init__(self, inputs):
+        try:
+            self.sku = inputs["common"]["sku"]
+        except:
+            self.sku = None
+        self.n_cpu = inputs["common"]["n_cpu"]
+        self.ram = inputs["common"]["ram"]
+        self.server = inputs["common"]["server"]
 
 
 class Series:
