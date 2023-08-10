@@ -1,18 +1,6 @@
 def dow_msft_model(graph):
     """
     ref link: https://github.com/Green-Software-Foundation/sci-guide/blob/dev/use-case-submissions/dow-msft-Graph-DB.md
-
-    E is energy in units kwH
-    E calculated as:
-
-    P[kwH] = (Pcpu + Pm or Pr + Power consumed by GPU or Pg Number of GPUs)/1000
-
-    Pcpu = power consumed by CPU (or CPUs, in which case N cores * utilization)
-    Pgpu = power consumed by GPU (or GPUs, in which case N units * utilization)
-    Pmem = power consumed by memory
-
-    RAM consumes 0.38kwh/GB, so 32GB allocated per VM equates to 32 * 0.38 = 12.16 kwh
-
     """
     TPU = 0
     E_cpu = []
@@ -46,7 +34,6 @@ def dow_msft_model(graph):
                 ((j.observations.common["ram"] * RAM_consumption_per_gig) * hours)
                 / 1000
             )
-
             # calculate embodied C
             C_coeff = get_embodied_carbon_coefficient(j.observations.common["server"])
             lifespan = get_server_lifespan(j.observations.common["server"])
@@ -62,7 +49,6 @@ def dow_msft_model(graph):
 
     total_E_cpu = sum(E_cpu)  # currently assumes data is given for one hour duration
     total_E_mem = sum(E_mem)
-
     total_M_cpu = sum(M_cpu)
     total_M_mem = sum(M_mem)
     print("M_mem", M_mem)
