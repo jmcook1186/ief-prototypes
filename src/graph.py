@@ -4,27 +4,6 @@ from models.models import dow_msft_model
 
 
 class impact_graph:
-    """
-    The impact graph is a class representing the mpact.yaml.
-    It is the highest level object in the project. The information
-    in impact.yaml is marshalled into into appropriate types and
-    assigned to class attributes. Then, class method can operate on
-    the information. This is how the impact.yaml becomes executable.
-
-    Inputs:
-    - None
-
-    Attributes:
-    - name
-    - description
-    - tags
-    - config
-    - graph
-
-    Methods:
-    -
-    """
-
     def __init__(self):
         SRC_PATH = Path(__file__).resolve().parent
         input_file = SRC_PATH.joinpath("dow_msft_graph.yaml").as_posix()
@@ -34,37 +13,67 @@ class impact_graph:
         self.description = inputs["description"]
         self.tags = dict(inputs["tags"])
         self.config = Config(inputs)
-        self.graph = Graph(inputs)
-
-    def show_name(self):
-        print("\nName", "\n----\n", self.name)
-
-    def show_tags(self):
-        print("\nTags", "\n----\n")
-        for i in self.tags:
-            print(i, ": ", self.tags[i])
-
-    def show_pipeline(self):
-        print("\nPipeline", "\n--------\n")
-        for i in vars(self.config.pipeline):
-            print(i, ": ", getattr(self.config.pipeline, i))
-
-    def show_graph(self):
-        print("\nGraph", "\n-----\n")
-        for i in self.graph.node_names:
-            print("Nodes: ", i)
-
-    def show_data(self):
-        for i in self.graph.nodes:
-            for j in i.children:
-                print("Child: ", j.type, j.id, "\n")
-                print(j.observations.series.data)
+        self.graph = Graph(inputs["graph"])
 
     def run_model(self):
         if self.config.pipeline.calculation == "dow-msft":
             return dow_msft_model(self.graph)
         else:
             raise ValueError("Model not recognized")
+
+
+class Graph:
+    def __init__(self, inputs):
+        nodes = []
+        self.node_names = []
+        self.nodes = []
+        for i in inputs:
+            node = Node(inputs[i])
+            self.nodes.append(node)
+            self.node_names.append(i)
+
+
+class Node:
+    def __init__(self, inputs):
+        self.children = []
+        for key in inputs:
+            if key != "children":
+                setattr(self, key, inputs[key])
+        for childname in inputs["children"]:
+            self.children.append(ChildNode(inputs["children"][childname], childname))
+
+
+class ChildNode:
+    def __init__(self, inputs, name):
+        self.name = name
+        self.observations = Observations(inputs["observations"])
+
+
+class Observations:
+    def __init__(self, inputs):
+        for key in inputs:
+            if key == "series":
+                self.series = Series(inputs[key])
+            else:
+                setattr(self, key, inputs[key])
+
+
+class Series:
+    def __init__(self, inputs):
+        self.timestamps = []
+        for entry in inputs:
+            for field in entry:
+                # grab the time related data regardless of whether it is referred to
+                # as 'datetime' or 'timestamp'
+                if "time" in field:
+                    self.timestamps.append(entry[field])
+                else:
+                    # this is weird syntax because we want to create arrays and append to them
+                    # this is so we can create an attribute and append to them
+                    if hasattr(self, field):
+                        getattr(self, field).append(entry[field])
+                    else:
+                        setattr(self, field, [entry[field]])
 
 
 class Config:
@@ -80,84 +89,3 @@ class Pipeline:
         self.calculation = calculation
         self.normalization = normalization
         self.aggregation = aggregation
-
-
-class Graph:
-    def __init__(self, inputs):
-        node_names = []
-        nodes = []
-        for i in inputs["graph"]:
-            node_names.append(i)
-            nodes.append(Node(inputs["graph"][i]))
-        self.node_names = node_names
-        self.nodes = nodes
-
-
-class Node:
-    def __init__(self, inputs):
-        self.model = inputs["model"]
-        self.config = NodeConfig(inputs["config"])
-        children = []
-        child_names = []
-        for n, i in enumerate(inputs["children"]):
-            child_names.append(i)
-            children.append(Child(i, n, inputs["children"][i]))
-        self.child_names = child_names
-        self.children = children
-
-
-class NodeConfig:
-    def __init__(self, inputs):
-        self.vendor = inputs["vendor"]
-        self.region = inputs["region"]
-
-
-class Child:
-    def __init__(self, name, id, inputs):
-        if name == "queue":
-            self.id = id
-            self.type = "queue"
-            self.observations = Observation(inputs["observations"])
-
-        elif name == "servers":
-            self.type = "server"
-            self.id = id
-            # self.config =
-            # self.params =
-            self.observations = Observation(inputs["observations"])
-
-        elif name == "database":
-            self.type = "database"
-            self.id = id
-            # self.config =
-            # self.params =
-            self.observations = Observation(inputs["observations"])
-
-        elif name == "api":
-            self.type = "api"
-            self.id = id
-            # self.config =
-            # self.params =
-            self.observations = Observation(inputs["observations"])
-
-
-class Observation:
-    def __init__(self, inputs):
-        self.common = Common(inputs)
-        self.series = Series(inputs["series"])
-
-
-class Common:
-    def __init__(self, inputs):
-        try:
-            self.sku = inputs["common"]["sku"]
-        except:
-            self.sku = None
-        self.n_cpu = inputs["common"]["n_cpu"]
-        self.ram = inputs["common"]["ram"]
-        self.server = inputs["common"]["server"]
-
-
-class Series:
-    def __init__(self, inputs):
-        self.data = inputs
