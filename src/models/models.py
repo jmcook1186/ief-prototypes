@@ -1,3 +1,9 @@
+import pandas as pd
+import numpy as np
+import warnings
+from pathlib import Path
+
+
 def dow_msft_model(graph):
     """
     ref link: https://github.com/Green-Software-Foundation/sci-guide/blob/dev/use-case-submissions/dow-msft-Graph-DB.md
@@ -11,6 +17,10 @@ def dow_msft_model(graph):
     M_mem = []
     M_tot = []
     hours = 1
+    SRC_PATH = Path(__file__).resolve().parent
+    data_path = SRC_PATH.joinpath("../data/aws-ec2-carbon-footprint.csv").as_posix()
+    aws_data = pd.read_csv(data_path)
+
     RAM_consumption_per_gig = 0.38  # RAM consumes 0.38kwh/GB
 
     for i in graph.nodes:
@@ -38,10 +48,13 @@ def dow_msft_model(graph):
             C_coeff = get_embodied_carbon_coefficient(j.observations.common["server"])
             lifespan = get_server_lifespan(j.observations.common["server"])
             instance_cpu = get_instance_cpu(j.observations.common["server"])
-            instance_memory = get_instance_memory(j.observations.common["server"])
+            instance_memory = get_instance_memory(
+                j.observations.common["server"], aws_data
+            )
             platform_cpu = get_platform_cpu(j.observations.common["server"])
-            platform_memory = get_platform_memory(j.observations.common["server"])
-
+            platform_memory = get_platform_memory(
+                j.observations.common["server"], aws_data
+            )
             M_cpu.append(C_coeff * (hours / lifespan) * (instance_cpu / platform_cpu))
             M_mem.append(
                 C_coeff * (hours / lifespan) * (instance_memory / platform_memory)
@@ -102,26 +115,39 @@ def get_server_lifespan(server):
         return 4 * 365 * 24  # arbitrary default
 
 
-def get_instance_memory(server):
-    # this data should be looked up from https://docs.google.com/spreadsheets/d/1DqYgQnEDLQVQm5acMAhLgHLD8xXCG9BIrk-_Nv6jF3k/edit#gid=504755275
-    # in the EC2 isntances tab - the servers here are not actually listed, so let's return values from the Dow-msft github docs
-    if server == "Intel-xeon-platinum-8380":
-        return 2
-    elif server == "Intel-xeon-platinum-8270":
-        return 2
-    else:
-        return 2  # arbitrary default
+def get_instance_memory(server, data):
+    return lookup_number(server, data, "Platform CPU Name", "Instance Memory (in GB)")
 
 
-def get_platform_memory(server):
-    # this data should be looked up from https://docs.google.com/spreadsheets/d/1DqYgQnEDLQVQm5acMAhLgHLD8xXCG9BIrk-_Nv6jF3k/edit#gid=504755275
-    # in the EC2 isntances tab - the servers here are not actually listed, so let's return values from the Dow-msft github docs
-    if server == "Intel-xeon-platinum-8380":
-        return 64
-    elif server == "Intel-xeon-platinum-8270":
-        return 64
+def lookup_number(value, data, filter, target):
+    """
+    this function looks up numeric values in the aws dataframe
+    it returns the value from the `target` column where the entry in the `filter` column matches `value`.
+    If there is more than one value in the `filter` matching the given `value`, then the int(mean) of the retrieved values is returned.
+    If `value` yields no valid values, the most common value in `target` is returned
+    A warning is emitted in the latter case.
+    """
+    result = pd.to_numeric(data[data[filter] == value][target].values)
+    if len(result) == 0 or result == None:
+        # there are invalid entries in the original data that contain multiple commas separated values where there should be one int.
+        # let's filter them out
+        filtered_data = pd.to_numeric(
+            data[target][data[target].str.contains(",") == False].values
+        )
+        # now we'll use the most common value as a stand in for our missing data
+        vals, counts = np.unique(filtered_data, return_counts=True)
+        warnings.warn(
+            "{} not recognized, using most common value for {} from all {} in database".format(
+                value, target, filter
+            )
+        )
+        return vals[np.argmax(counts)]
     else:
-        return 64  # arbitrary default
+        return int(result.mean())
+
+
+def get_platform_memory(server, data):
+    return lookup_number(server, data, "Platform CPU Name", "Platform Memory (in GB)")
 
 
 def get_instance_cpu(server):
