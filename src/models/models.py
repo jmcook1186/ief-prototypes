@@ -1,7 +1,6 @@
 import pandas as pd
-import numpy as np
-import warnings
 from pathlib import Path
+from utils import lookup_number
 
 
 def dow_msft_model(graph):
@@ -18,40 +17,51 @@ def dow_msft_model(graph):
     M_tot = []
     hours = 1
     SRC_PATH = Path(__file__).resolve().parent
-    data_path = SRC_PATH.joinpath("../data/aws-ec2-carbon-footprint.csv").as_posix()
-    aws_data = pd.read_csv(data_path)
-
-    RAM_consumption_per_gig = 0.38  # RAM consumes 0.38kwh/GB
+    aws_data_path = SRC_PATH.joinpath("../data/aws-ec2-carbon-footprint.csv").as_posix()
+    aws_data = pd.read_csv(aws_data_path)
+    # RAM consumes 0.38kwh/GB,
+    # https://www.crucial.com/support/articles-faq-memory/how-much-power-does-memory-use
+    RAM_consumption_per_gig = 0.38
 
     for i in graph.nodes:
         carbon_intensity = get_intensity(i.config["region"])
         for j in i.children:
             # TODO make this a lookup to external file with server name as key
             TPU = get_TPU(j.observations.common["server"])
-            # calculate mean CPU load for each child
-            cpu_loads = []
-            for k in j.observations.series.cpu_load:
-                cpu_loads.append(k)
-            cpu_load = 0
-            for i in cpu_loads:
-                cpu_load += i
-            mean_cpu_load = cpu_load / len(cpu_loads)
-            # append calculation of E for each child
-            E_cpu.append(((TPU * mean_cpu_load) * hours) / 1000)
 
-            # calculate Emem
-            E_mem.append(
-                ((j.observations.common["ram"] * RAM_consumption_per_gig) * hours)
-                / 1000
-            )
+            # calculate mean CPU energy for each child
+            # the loop is to account for multiple observations (timesteps)
+            # taking the mean is a stand-in for a proper tiem nor alization - coming soon
+            tdp_coeffs = []
+            for k in j.observations.series.tdp_coeff:
+                tdp_coeffs.append(k)
+            tdp_coeff = 0
+            for i in tdp_coeffs:
+                tdp_coeff += i
+            mean_tdp_coeff = tdp_coeff / len(tdp_coeffs)
+            # append calculation of E for each child
+            E_cpu.append(((TPU * mean_tdp_coeff) * hours) / 1000)
+
+            # calculate Emem for each child
+            # calculate mean CPU energy for each child
+            mems = []
+            for k in j.observations.series.memory_utilization:
+                mems.append(k)
+            mem = 0
+            for i in mems:
+                mem += i
+            mean_mem = mem / len(mems)
+            # append calculation of E for each child
+
+            E_mem.append(((mean_mem * RAM_consumption_per_gig) * hours) / 1000)
             # calculate embodied C
             C_coeff = get_embodied_carbon_coefficient(j.observations.common["server"])
             lifespan = get_server_lifespan(j.observations.common["server"])
-            instance_cpu = get_instance_cpu(j.observations.common["server"])
+            instance_cpu = get_instance_cpu(j.observations.common["server"], aws_data)
             instance_memory = get_instance_memory(
                 j.observations.common["server"], aws_data
             )
-            platform_cpu = get_platform_cpu(j.observations.common["server"])
+            platform_cpu = get_platform_cpu(j.observations.common["server"], aws_data)
             platform_memory = get_platform_memory(
                 j.observations.common["server"], aws_data
             )
@@ -64,8 +74,6 @@ def dow_msft_model(graph):
     total_E_mem = sum(E_mem)
     total_M_cpu = sum(M_cpu)
     total_M_mem = sum(M_mem)
-    print("M_mem", M_mem)
-    print("M_cpu", M_cpu)
 
     for i in range(0, len(E_cpu)):
         E_tot.append(E_cpu[i] + E_mem[i])
@@ -119,54 +127,15 @@ def get_instance_memory(server, data):
     return lookup_number(server, data, "Platform CPU Name", "Instance Memory (in GB)")
 
 
-def lookup_number(value, data, filter, target):
-    """
-    this function looks up numeric values in the aws dataframe
-    it returns the value from the `target` column where the entry in the `filter` column matches `value`.
-    If there is more than one value in the `filter` matching the given `value`, then the int(mean) of the retrieved values is returned.
-    If `value` yields no valid values, the most common value in `target` is returned
-    A warning is emitted in the latter case.
-    """
-    result = pd.to_numeric(data[data[filter] == value][target].values)
-    if len(result) == 0 or result == None:
-        # there are invalid entries in the original data that contain multiple commas separated values where there should be one int.
-        # let's filter them out
-        filtered_data = pd.to_numeric(
-            data[target][data[target].str.contains(",") == False].values
-        )
-        # now we'll use the most common value as a stand in for our missing data
-        vals, counts = np.unique(filtered_data, return_counts=True)
-        warnings.warn(
-            "{} not recognized, using most common value for {} from all {} in database".format(
-                value, target, filter
-            )
-        )
-        return vals[np.argmax(counts)]
-    else:
-        return int(result.mean())
-
-
 def get_platform_memory(server, data):
     return lookup_number(server, data, "Platform CPU Name", "Platform Memory (in GB)")
 
 
-def get_instance_cpu(server):
-    # this data should be looked up from https://docs.google.com/spreadsheets/d/1DqYgQnEDLQVQm5acMAhLgHLD8xXCG9BIrk-_Nv6jF3k/edit#gid=504755275
-    # in the EC2 isntances tab - the servers here are not actually listed, so let's return values from the Dow-msft github docs
-    if server == "Intel-xeon-platinum-8380":
-        return 1
-    elif server == "Intel-xeon-platinum-8270":
-        return 1
-    else:
-        return 1  # arbitrary default
+def get_instance_cpu(server, data):
+    return lookup_number(server, data, "Platform CPU Name", "Instance vCPU")
 
 
-def get_platform_cpu(server):
-    # this data should be looked up from https://docs.google.com/spreadsheets/d/1DqYgQnEDLQVQm5acMAhLgHLD8xXCG9BIrk-_Nv6jF3k/edit#gid=504755275
-    # in the EC2 isntances tab - the servers here are not actually listed, so let's return values from the Dow-msft github docs
-    if server == "Intel-xeon-platinum-8380":
-        return 8
-    elif server == "Intel-xeon-platinum-8270":
-        return 8
-    else:
-        return 8  # arbitrary default
+def get_platform_cpu(server, data):
+    return lookup_number(
+        server, data, "Platform CPU Name", "Platform Total Number of vCPU"
+    )
