@@ -132,7 +132,6 @@ def time_normalization(in_data):
     """
     temp_data = []
     for k in in_data:
-        print("processing series")
         temp_data.append(k)
     temp = 0
     for i in temp_data:

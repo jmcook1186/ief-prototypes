@@ -23,8 +23,8 @@ Code is formatted using Black.
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 
-
 ## TODO
-- rethink what params are in `common` and which are specific to individual `series`. Update model accordingly
-- add neo4j db and api to model
 - work out how to deal with time
+- enable impl definition and mdoel definition as cli args
+- enable verbosity flag in cli
+- maybe return full breakdown of output data as out yaml?

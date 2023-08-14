@@ -1,8 +1,7 @@
 from graph import impact_graph
 
 
-graph = impact_graph()
-graph2 = impact_graph()
+graph = impact_graph("dow_msft.yaml")
 # graph.show_name()
 # graph.show_tags()
 # graph.show_pipeline()

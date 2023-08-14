@@ -4,9 +4,9 @@ from models.models import dow_msft_model
 
 
 class impact_graph:
-    def __init__(self):
+    def __init__(self, impl):
         SRC_PATH = Path(__file__).resolve().parent
-        input_file = SRC_PATH.joinpath("dow_msft_graph.yaml").as_posix()
+        input_file = SRC_PATH.joinpath("impls/" + impl).as_posix()
         with open(input_file, "r") as ymlfile:
             inputs = yaml.load(ymlfile, Loader=yaml.FullLoader)
         self.name = inputs["name"]

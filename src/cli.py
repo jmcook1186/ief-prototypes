@@ -18,7 +18,7 @@ parser.add_argument(
 
 # parse the arguments from standard input
 args = parser.parse_args()
-graph = impact_graph()
+graph = impact_graph("dow_msft.yaml")
 
 # # check if add argument has any input data.
 # # If it has, then print sum of the given numbers
