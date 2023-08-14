@@ -27,31 +27,15 @@ def dow_msft_model(graph):
         carbon_intensity = get_intensity(i.config["region"])
         for j in i.children:
             # TODO make this a lookup to external file with server name as key
+            # Where can this data come from?
             TPU = get_TPU(j.observations.common["server"])
-
-            # calculate mean CPU energy for each child
-            # the loop is to account for multiple observations (timesteps)
-            # taking the mean is a stand-in for a proper tiem nor alization - coming soon
-            tdp_coeffs = []
-            for k in j.observations.series.tdp_coeff:
-                tdp_coeffs.append(k)
-            tdp_coeff = 0
-            for i in tdp_coeffs:
-                tdp_coeff += i
-            mean_tdp_coeff = tdp_coeff / len(tdp_coeffs)
+            mean_tdp_coeff = time_normalization(j.observations.series.tdp_coeff)
             # append calculation of E for each child
             E_cpu.append(((TPU * mean_tdp_coeff) * hours) / 1000)
 
             # calculate Emem for each child
-            # calculate mean CPU energy for each child
-            mems = []
-            for k in j.observations.series.memory_utilization:
-                mems.append(k)
-            mem = 0
-            for i in mems:
-                mem += i
-            mean_mem = mem / len(mems)
-            # append calculation of E for each child
+
+            mean_mem = time_normalization(j.observations.series.memory_utilization)
 
             E_mem.append(((mean_mem * RAM_consumption_per_gig) * hours) / 1000)
             # calculate embodied C
@@ -139,3 +123,20 @@ def get_platform_cpu(server, data):
     return lookup_number(
         server, data, "Platform CPU Name", "Platform Total Number of vCPU"
     )
+
+
+def time_normalization(in_data):
+    """
+    calculate mean CPU energy for each child
+    taking the mean is a stand-in for a proper time normalization - coming soon
+    """
+    temp_data = []
+    for k in in_data:
+        print("processing series")
+        temp_data.append(k)
+    temp = 0
+    for i in temp_data:
+        temp += i
+    out_data = temp / len(temp_data)
+
+    return out_data
