@@ -4,7 +4,7 @@
 A prototype CLI that calculates carbon expenditure from hardware and software specifications that are provided in a yaml file.
 
 
-## setting up environment
+## Setting up environment
 
 ```sh
 conda create -n ief-env yaml argparse black pandas numpy
