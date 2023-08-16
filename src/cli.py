@@ -10,10 +10,9 @@ parser.add_argument(
     "--config", action="store_true", help="Prints out model configuration."
 )
 parser.add_argument(
-    "-cpu",
-    "--calculate_cpu",
+    "--calculate",
     action="store_true",
-    help="Prints out model configuration.",
+    help="Runs model.",
 )
 
 # parse the arguments from standard input
@@ -32,5 +31,5 @@ if args.config:
     graph.show_data()
 
 
-if args.calculate_cpu:
+if args.calculate:
     print("Total CPU usage = ", graph.run_model())

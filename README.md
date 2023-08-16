@@ -9,9 +9,16 @@ A prototype CLI that calculates carbon expenditure from hardware and software sp
 ```sh
 conda create -n ief-env yaml argparse black pandas numpy
 ```
+To run as a script:
 
 ```sh
 python3 src/main.py
+```
+
+To run as CLI:
+
+```sh
+python src/cli.py --calculate
 ```
 
 ## Gotchas
