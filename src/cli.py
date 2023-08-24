@@ -15,9 +15,11 @@ parser.add_argument(
     help="Runs model.",
 )
 
+parser.add_argument("--impl", type=str, action="store")
+
 # parse the arguments from standard input
 args = parser.parse_args()
-graph = impact_graph("dow_msft.yaml")
+graph = impact_graph(args.impl)
 
 # # check if add argument has any input data.
 # # If it has, then print sum of the given numbers

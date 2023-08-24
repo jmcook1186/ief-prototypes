@@ -65,10 +65,10 @@ def dow_msft_model(graph):
     for i in range(0, len(M_cpu)):
         M_tot.append(M_cpu[i] + M_mem[i])
 
-    print("total embodied = ", sum(M_tot) * 1000)
-    print("total energy in kwh = ", sum(E_tot))
-    print("total carbon from CPU = ", sum(E_tot_C))
-    print("total carbon = ", (sum(E_tot_C) + sum(M_tot) * 1000))
+    print("total embodied: ", sum(M_tot) * 1000)
+    print("total energy in kwh: ", sum(E_tot))
+    print("total carbon from CPU: ", sum(E_tot_C))
+    print("total carbon: ", (sum(E_tot_C) + sum(M_tot) * 1000))
     return E_tot
 
 
